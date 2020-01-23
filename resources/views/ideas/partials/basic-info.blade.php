@@ -2,7 +2,7 @@
     <div class="row">
         <div class="col-md-2">
             <label for="id">ID:</label>
-            <input type="text" name="id" id="id" class="form-control" value="{{ $idea->id }}" disabled>
+            <input type="text" name="id" id="id" class="form-control" value="{{ $idea->getReqIdAsString() }}" disabled>
         </div>
         <div class="col-md-10">
             <label for="title">Title:</label>
@@ -30,8 +30,12 @@
         </div>
         <div class="col-md-3">
             <label for="expected-effort">Expected effort in hours:</label>
+            @if (isset($centralResources))
+            <input type="text" name="expected-effort" id="expected-effort" class="form-control" value="{{ $idea->expected_effort }}">
+            @else
             <input type="text" name="expected-effort" id="expected-effort" class="form-control"
                 value="{{ $idea->expected_effort }}" disabled>
+            @endif
         </div>
     </div>
 </div>
@@ -65,7 +69,11 @@
     <div class="row">
         <div class="col-md-6">
             <label for="sme">SME:</label>
+            @if (isset($assignSme))
+            <input type="text" name="sme" id="sme" class="form-control" value="{{ $idea->smeUser->email }}">
+            @else
             <input type="text" name="sme" id="sme" class="form-control" value="{{ $idea->smeUser->name }}" disabled>
+            @endif
         </div>
         <div class="col-md-6">
             <label for="attachment">Attachment:</label>

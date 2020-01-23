@@ -20,7 +20,7 @@ class UsersController extends Controller
      */
     public function index()
     {
-        return view("users.index")->with("users", User::all());
+        return view("users.index")->with("users", User::paginate(5));
     }
 
     /**
@@ -30,7 +30,9 @@ class UsersController extends Controller
      */
     public function create()
     {
-        return view("users.create")->with("roles", Role::all());
+        return view("users.create")
+            ->with("roles", Role::all())
+            ->with("allUsers", User::all());
     }
 
     /**
@@ -44,6 +46,7 @@ class UsersController extends Controller
         $user = User::create([
             "name" => $request->name,
             "email" => $request->email,
+            "manager_id" => $request->manager,
             "password" => Hash::make($request->password)
         ]);
 
@@ -77,7 +80,8 @@ class UsersController extends Controller
     {
         return view("users.create")
             ->with("user", $user)
-            ->with("roles", Role::all());
+            ->with("roles", Role::all())
+            ->with("allUsers", User::all());
     }
 
     /**
@@ -94,8 +98,10 @@ class UsersController extends Controller
             return redirect()->back();
         }
 
-        $data = $request->only(["name", "role_ids"]);
-        $user->update($data);
+        $user->update([
+            "name" => $request["name"],
+            "manager_id" => $request["manager"]
+        ]);
 
         if($request->role_ids) {
             $user->roles()->sync($request->role_ids);

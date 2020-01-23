@@ -26,6 +26,8 @@ Route::middleware("auth")->group(function() {
     Route::middleware("pwd_expired")->group(function() {
         
         Route::get('/home', 'HomeController@index')->name('home');
+        
+        Route::get('/notifications', 'NotificationsController@index')->name('notifications.index');
 
         Route::middleware("idea_submitter")->group(function() {
 
@@ -47,9 +49,20 @@ Route::middleware("auth")->group(function() {
 
         });
 
+        Route::middleware("can_edit_ideas")->group(function() {
+            
+            Route::get('ideas/show-full-edit/{idea}', 'IdeaController@showFullEdit')->name('ideas.show-full-edit');
+        
+            Route::put('ideas/full-edit/{idea}', 'IdeaController@fullEdit')->name('ideas.full-edit');
+
+        });
+
+
         Route::middleware("idea_processor")->group(function() {
 
-            Route::get('/ideas/personal-que', 'IdeaController@showPersonalQue')->name('ideas.personal-que');
+            Route::get('/ideas/personal-que-active', 'IdeaController@showPersonalQueActive')->name('ideas.personal-que-active');
+            
+            Route::get('/ideas/personal-que-all', 'IdeaController@showPersonalQueAll')->name('ideas.personal-que-all');
             
         });
 
@@ -70,6 +83,8 @@ Route::middleware("auth")->group(function() {
             Route::put('/ideas/update-resubmit/{idea}', 'IdeaController@updateResubmit')->name('ideas.update-resubmit');
             
             Route::put('/ideas/update-complete/{idea}', 'IdeaController@updateComplete')->name('ideas.update-complete');
+            
+            Route::put('/ideas/assign-sme/{idea}', 'IdeaController@assignSme')->name('ideas.assign-sme');
             
             Route::put('/ideas/{idea}', 'IdeaController@update')->name('ideas.update');
             

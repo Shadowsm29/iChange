@@ -2,7 +2,7 @@
     <div class="row">
         <div class="col-md-2">
             <label for="id">ID:</label>
-            <input type="text" name="id" id="id" class="form-control" value="{{ $idea->id }}" disabled>
+            <input type="text" name="id" id="id" class="form-control" value="{{ $idea->getReqIdAsString() }}" disabled>
         </div>
         <div class="col-md-10">
             <label for="title">Title:</label>
@@ -15,22 +15,14 @@
     <div class="row">
         <div class="col-md-3">
             <label for="change-type">Change type:</label>
-            @if (auth()->user()->isAdvancedUser())
-            <select name="change-type" id="change-type" class="form-control">
-                <option value=""></option>
-                @foreach ($changeTypes as $changeType)
-                <option value="{{ $changeType->id }}" {{ $changeType->id == $idea->change_type_id ? "selected" : ""}}>{{ $changeType->name }}</option>
-                @endforeach
-            </select>
-            @else
             <select name="change-type" id="change-type" class="form-control">
                 @foreach ($changeTypes as $changeType)
-                @if ($changeType->id == $justDoItId)
-                <option value="{{ $changeType->id }}">{{ $changeType->name }}</option>
+                @if ($changeType->id == $idea->change_type_id)
+                <option value="{{ $changeType->id }}"S>
+                    {{ $changeType->name }}</option>
                 @endif
                 @endforeach
             </select>
-            @endif
         </div>
         <div class="col-md-3">
             <label for="justification">Justification:</label>
@@ -105,11 +97,11 @@
 
 <div class="form-group">
     <div class="row">
-        <div class="col-md-6">
+        {{-- <div class="col-md-6">
             <label for="sme">SME:</label>
-            <input type="text" name="sme" id="sme" class="form-control" value="{{ $idea->smeUser->email }}" required>
-        </div>
-        <div class="col-md-6">
+            <input type="text" name="sme" id="sme" class="form-control" value="{{ $idea->smeUser->email }}">
+        </div> --}}
+        <div class="col-md-12">
             <label for="attachment">Attachment:</label>
             {{-- <input type="file" class="form-control-file" id="attachment" name="attachment"> --}}
         </div>

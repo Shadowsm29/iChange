@@ -6,6 +6,7 @@ use App\ChangeType;
 use App\Circle;
 use App\Comment;
 use App\Http\Requests\Ideas\ApproveIdeaRequest;
+use App\Http\Requests\Ideas\AssignSmeIdeaRequest;
 use App\Http\Requests\Ideas\CancelIdeaRequest;
 use App\Justification;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ use App\Http\Requests\Ideas\StoreIdeaRequest;
 use App\Http\Requests\Ideas\DeclineIdeaRequest;
 use App\Http\Requests\Ideas\UpdateResubmitIdeaRequest;
 use App\Http\Requests\Ideas\BackToSubmitterIdeaRequest;
+use App\Http\Requests\Ideas\FullEditIdeaRequest;
 use App\Http\Requests\Ideas\UpdateCompleteIdeaRequest;
 use App\Http\Requests\Ideas\UpdateIdeaRequest;
 use App\Idea;
@@ -24,19 +26,10 @@ use App\User;
 
 class IdeaController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
-    {
-    }
-
     public function listAllideas()
     {
         return view("ideas.all-ideas")
-            ->with("ideas", Idea::orderBy("created_at", "desc")->get())
+            ->with("ideas", Idea::orderBy("created_at", "desc")->paginate(10))
             ->with("title", "All ideas");
     }
 
@@ -44,41 +37,42 @@ class IdeaController extends Controller
     {
         return view("ideas.all-ideas")
             ->with("title", "All active ideas")
-            ->with("ideas", Idea::orderBy("created_at", "desc")->get()
-                ->where("status_id", "<>", Status::$CANCELLED)
-                ->where("status_id", "<>", Status::$IMPLEMENTED)
-                ->where("status_id", "<>", Status::$DECLINED));
+            ->with("ideas", Idea::orderBy("created_at", "desc")->isOpen()->paginate(10));
     }
 
     public function listMyActiveIdeas()
     {
         return view("ideas.all-ideas")
             ->with("title", "My active ideas")
-            ->with("ideas", auth()->user()->ideas()
-                ->where("status_id", "<>", Status::$CANCELLED)
-                ->where("status_id", "<>", Status::$IMPLEMENTED)
-                ->where("status_id", "<>", Status::$DECLINED)->get());
+            ->with("ideas", auth()->user()->ideas()->isOpen()->paginate(10));
     }
 
     public function listMyAllIdeas()
     {
         return view("ideas.all-ideas")
-            ->with("ideas", auth()->user()->ideas)
+            ->with("ideas", auth()->user()->ideas()->paginate(10))
             ->with("title", "My all ideas");
     }
 
-    public function showPersonalQue()
+    public function showPersonalQueActive()
     {
-        $ideas = Idea::orderBy("created_at", "desc")->get();
-        $ideasAssignedToUser = [];
-        foreach ($ideas as $idea) {
-            if ($idea->isAssignedToUser() && $idea->isOpen()) {
-                array_push($ideasAssignedToUser, $idea);
-            }
-        }
+        $authorizedArr = auth()->user()->getAuthorizationIds();
+
+        $ideas = Idea::orderBy("created_at", "desc")->assignedTo($authorizedArr)->orIsSme(auth()->user()->id)->isOpen()->paginate(10);
 
         return view("ideas.all-ideas")
-            ->with("ideas", $ideasAssignedToUser)
+            ->with("ideas", $ideas)
+            ->with("title", "Ideas assigned to me or my group");
+    }
+
+    public function showPersonalQueAll()
+    {
+        $authorizedArr = auth()->user()->getAuthorizationIds();
+
+        $ideas = Idea::orderBy("created_at", "desc")->assignedTo($authorizedArr)->orIsSme(auth()->user()->id)->paginate(10);
+
+        return view("ideas.all-ideas")
+            ->with("ideas", $ideas)
             ->with("title", "Ideas assigned to me or my group");
     }
 
@@ -96,10 +90,12 @@ class IdeaController extends Controller
             ->with("justifications", Justification::orderBy('name', 'asc')->get())
             ->with("users", User::all("email"))
             ->with("justDoItId", ChangeType::$JUST_DO_IT)
-            ->with("lss", ChangeType::$LSS)
-            ->with("rpa", ChangeType::$RPA)
-            ->with("cosmos", ChangeType::$COSMOS)
-            ->with("it", ChangeType::$IT);
+            ->with("showExpectedEffort", [
+                ChangeType::$JUST_DO_IT, ChangeType::$BUSINESS, ChangeType::$ORGANIZATIONAL
+            ])
+            ->with("showSme", [
+                ChangeType::$LSS, ChangeType::$RPA, ChangeType::$COSMOS, ChangeType::$IT
+            ]);
     }
 
     /**
@@ -126,18 +122,7 @@ class IdeaController extends Controller
             $pendingAt = $this->getRoleIdByName(Role::$MT);
         }
 
-        if (
-            $request["change-type"] == ChangeType::$JUST_DO_IT ||
-            $request["change-type"] == ChangeType::$BUSINESS ||
-            $request["change-type"] == ChangeType::$ORGANIZATIONAL
-        ) {
-            $sme = auth()->user()->id;
-        } else {
-            $sme = $this->getUserIdByEmail($request["sme"]);
-        }
-
-
-        Idea::create([
+        $idea = Idea::create([
             "submitter_id" => auth()->user()->id,
             "title" => $request->title,
             "change_type_id" => $request["change-type"],
@@ -147,12 +132,20 @@ class IdeaController extends Controller
             "expected_benefit" => $request["expected-benefit"],
             "expected_benefit_type" => $request["expected-benefit-type"],
             "expected_effort" => $request["expected-effort"],
-            "sme_id" => $sme,
+            "sme_id" => $sme = auth()->user()->id,
             "pending_at_id" => $pendingAt,
             "status_id" => $status,
             "attachment" => $attachment,
             "description" => $request["description"],
         ]);
+
+        $idea->notifyNewIdea(auth()->user());
+
+        if ($request["change-type"] == ChangeType::$JUST_DO_IT) {
+            $idea->notifyActionNeeded(auth()->user()->manager);
+        } else {
+            $idea->notifyActionNeeded(User::mtUsers());
+        }
 
         session()->flash("success", "Idea registered successfully.");
 
@@ -163,10 +156,25 @@ class IdeaController extends Controller
     {
         if ($idea->isAssignedToUser()) {
             if ($idea->isApprovalAction()) {
-                return view("ideas.display-view")
-                    ->with("idea", $idea)
-                    ->with("approve", true)
-                    ->with("update", true);
+                if ($idea->status_id == Status::$INIT_CENT_RES_APPR) {
+                    return view("ideas.display-view")
+                        ->with("idea", $idea)
+                        ->with("approve", true)
+                        ->with("update", true)
+                        ->with("centralResources", true);
+                } elseif ($idea->status_id == Status::$FIN_MT_APPR) {
+                    return view("ideas.display-view")
+                        ->with("idea", $idea)
+                        ->with("ragStatuses", RagStatus::all())
+                        ->with("update", true)
+                        ->with("mtApprove", true)
+                        ->with("approve", true);
+                } else {
+                    return view("ideas.display-view")
+                        ->with("idea", $idea)
+                        ->with("approve", true)
+                        ->with("update", true);
+                }
             }
             if ($idea->status_id == Status::$CORR_NEEDED) {
                 return view("ideas.display-view")
@@ -180,31 +188,41 @@ class IdeaController extends Controller
                     ->with("update", true)
                     ->with("cancel", true)
                     ->with("forward", true)
-                    ->with("justDoItId", ChangeType::$JUST_DO_IT);;
+                    ->with("enableExpectedEffort", [
+                        ChangeType::$JUST_DO_IT, ChangeType::$BUSINESS, ChangeType::$ORGANIZATIONAL
+                    ])
+                    ->with("enableSme", [
+                        ChangeType::$LSS, ChangeType::$RPA, ChangeType::$COSMOS, ChangeType::$IT
+                    ]);
+            }
+            if ($idea->status_id == Status::$APPR_SME_ASSGN) {
+                return view("ideas.display-view")
+                    ->with("idea", $idea)
+                    ->with("users", User::all("email"))
+                    ->with("update", true)
+                    ->with("assignSme", true);
             }
             if ($idea->isWip()) {
-                // dd(RagStatus::all()->first()->id);
                 return view("ideas.display-view")
                     ->with("idea", $idea)
                     ->with("ragStatuses", RagStatus::all())
                     ->with("update", true)
                     ->with("complete", true);
             }
-            if ($idea->status_id == Status::$FIN_MT_APPR) {
+            if (!$idea->isOpen()) {
                 return view("ideas.display-view")
-                    ->with("idea", $idea)
-                    ->with("ragStatuses", RagStatus::all())
-                    ->with("update", true)
-                    ->with("approve", true);
+                    ->with("idea", $idea);
             }
+
+            return view("unauthorized.index");
         } elseif (
-            auth()->user()->isMt() ||
-            auth()->user()->isCentralResources() ||
-            auth()->user()->id == $idea->submitter_id
+            auth()->user()->canSeeAllIdeas() ||
+            auth()->user()->id == $idea->submitter_id ||
+            auth()->user()->id == $idea->sme_id
         ) {
             return view("ideas.display-view")->with("idea", $idea);
         } else {
-            return redirect(route("home"));
+            return view("unauthorized.index");
         }
     }
 
@@ -217,18 +235,19 @@ class IdeaController extends Controller
     public function updateResubmit(UpdateResubmitIdeaRequest $request, Idea $idea)
     {
         if ($idea->status_id == Status::$CORR_NEEDED) {
-
-            $this->updateIdea($request, $idea);
+            $this->updateBasicInfo($request, $idea);
 
             if ($request["change-type"] == ChangeType::$JUST_DO_IT) {
                 $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_LINE_MAN_APPR);
                 $this->setPendingAt($idea, $idea->submitter->manager_id);
+                $idea->notifyActionNeeded(auth()->user()->manager);
             } else {
                 $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_MT_APPR);
                 $this->setPendingAt($idea, $this->getRoleIdByName(Role::$MT));
+                $idea->notifyActionNeeded(User::mtUsers());
             }
         } else {
-            return redirect(route("home"));
+            return view("unauthorized.index");
         }
 
         session()->flash("success", "Request successfully updated and forwarded.");
@@ -243,8 +262,10 @@ class IdeaController extends Controller
             $this->createCommentAndUpdateStatus($idea, $request, Status::$FIN_MT_APPR);
             $this->setPendingAt($idea, $this->getRoleIdByName(Role::$MT));
         } else {
-            return redirect(route("home"));
+            return view("unauthorized.index");
         }
+
+        $idea->notifyActionNeeded(User::mtUsers());
 
         session()->flash("success", "Request successfully updated and forwarded for final approval.");
 
@@ -261,13 +282,24 @@ class IdeaController extends Controller
     public function update(UpdateIdeaRequest $request, Idea $idea)
     {
         if ($idea->status_id == Status::$CORR_NEEDED) {
-            $this->updateIdea($request, $idea);
+            $this->updateBasicInfo($request, $idea);
+        } elseif ($idea->status_id == Status::$INIT_MT_APPR || $idea->status_id == Status::$INIT_CHG_BOARD_APPR || $idea->status_id == Status::$FIN_MT_APPR) {
+            //update only comments - after if section
+        } elseif ($idea->status_id == Status::$APPR_SME_ASSGN) {
+            $idea->updateSme($request, $this->getUserIdByEmail($request["sme"]));
+        } elseif ($idea->status_id == Status::$INIT_CENT_RES_APPR) {
+            $idea->update([
+                "expected_effort" => $request["expected-effort"]
+            ]);
         } elseif ($idea->isWip()) {
             $idea->updateRagStatAndActualEffort($request);
-            $this->createCommentAndUpdateStatus($idea, $request, $idea->status_id);
+        } else {
+            return view("unauthorized.index");
         }
 
         $this->createCommentAndUpdateStatus($idea, $request, $idea->status_id);
+
+        $idea->notifyRequestUpdated($idea->submitter);
 
         session()->flash("success", "Request successfully updated.");
 
@@ -278,9 +310,11 @@ class IdeaController extends Controller
     {
         $this->createCommentAndUpdateStatus($idea, $request, Status::$DECLINED);
 
+        $idea->notifyRequestDeclined($idea->submitter);
+
         session()->flash("success", "Request successfully declined.");
 
-        return redirect(route("ideas.all-ideas"));
+        return redirect(route("ideas.personal-que-active"));
     }
 
     public function backToSubmitter(BackToSubmitterIdeaRequest $request, Idea $idea)
@@ -288,26 +322,55 @@ class IdeaController extends Controller
         if ($idea->status_id == Status::$FIN_MT_APPR) {
             if ($idea->change_type_id == ChangeType::$JUST_DO_IT) {
                 $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_JUST_DO_IT);
+                $this->setPendingAt($idea, $idea->submitter_id);
+                $idea->notifyActionNeeded($idea->submitter);
+            } elseif ($idea->change_type_id == ChangeType::$BUSINESS) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_BUSINESS);
+                $this->setPendingAt($idea, $idea->submitter_id);
+                $idea->notifyActionNeeded($idea->submitter);
+            } elseif ($idea->change_type_id == ChangeType::$ORGANIZATIONAL) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_ORGANIZATIONAL);
+                $this->setPendingAt($idea, $idea->submitter_id);
+                $idea->notifyActionNeeded($idea->submitter);
+            } elseif ($idea->change_type_id == ChangeType::$RPA) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_RPA);
+                $this->setPendingAt($idea, $this->getRoleIdByName(Role::$RPA));
+                $idea->notifyActionNeeded(User::rpaUsers());
+            } elseif ($idea->change_type_id == ChangeType::$LSS) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_LSS);
+                $this->setPendingAt($idea, $this->getRoleIdByName(Role::$LSS));
+                $idea->notifyActionNeeded(User::lssUsers());
+            } elseif ($idea->change_type_id == ChangeType::$COSMOS) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_COSMOS);
+                $this->setPendingAt($idea, $this->getRoleIdByName(Role::$COSMOS));
+                $idea->notifyActionNeeded(User::cosmosUsers());
+            } elseif ($idea->change_type_id == ChangeType::$IT) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_IT);
+                $this->setPendingAt($idea, $this->getRoleIdByName(Role::$IT));
+                $idea->notifyActionNeeded(User::itUsers());
             } else {
-                dd("backToSubmitter");
+                return view("unauthorized.index");
             }
         } else {
             $this->createCommentAndUpdateStatus($idea, $request, Status::$CORR_NEEDED);
+            $this->setPendingAt($idea, $idea->submitter_id);
+            $idea->notifyActionNeeded($idea->submitter);
         }
-        $this->setPendingAt($idea, $idea->submitter_id);
 
         session()->flash("success", "Request successfully routed back to submitter.");
 
-        return redirect(route("ideas.all-active"));
+        return redirect(route("ideas.personal-que-active"));
     }
 
     public function cancel(CancelIdeaRequest $request, Idea $idea)
     {
         $this->createCommentAndUpdateStatus($idea, $request, Status::$CANCELLED);
 
+        $idea->notifyRequestCancelled($idea->submitter);
+
         session()->flash("success", "Request successfully cancelled.");
 
-        return redirect(route("ideas.all-ideas"));
+        return redirect()->back();
     }
 
     public function approve(ApproveIdeaRequest $request, Idea $idea)
@@ -315,18 +378,29 @@ class IdeaController extends Controller
         if ($idea->status_id == Status::$INIT_LINE_MAN_APPR) {
             $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_JUST_DO_IT);
             $this->setPendingAt($idea, $idea->submitter_id);
+            $idea->notifyActionNeeded($idea->submitter);
         } elseif ($idea->status_id == Status::$INIT_MT_APPR) {
             if ($idea->change_type_id == ChangeType::$IT) {
                 $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_CHG_BOARD_APPR);
                 $this->setPendingAt($idea, $this->getRoleIdByName(Role::$CHG_BOARD));
+                $idea->notifyActionNeeded(User::changeBoardUsers());
             } else {
-                $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_CENT_RES_APPR);
                 if ($idea->change_type_id == ChangeType::$RPA) {
                     $this->setPendingAt($idea, $this->getRoleIdByName(Role::$RPA));
+                    $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_CENT_RES_APPR);
+                    $idea->notifyActionNeeded(User::rpaUsers());
                 } elseif ($idea->change_type_id == ChangeType::$LSS) {
                     $this->setPendingAt($idea, $this->getRoleIdByName(Role::$LSS));
+                    $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_CENT_RES_APPR);
+                    $idea->notifyActionNeeded(User::lssUsers());
                 } elseif ($idea->change_type_id == ChangeType::$COSMOS) {
                     $this->setPendingAt($idea, $this->getRoleIdByName(Role::$COSMOS));
+                    $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_CENT_RES_APPR);
+                    $idea->notifyActionNeeded(User::cosmosUsers());
+                } elseif ($idea->change_type_id == ChangeType::$ORGANIZATIONAL || $idea->change_type_id == ChangeType::$BUSINESS) {
+                    $this->setPendingAt($idea, $this->getRoleIdByName(Role::$CHG_BOARD));
+                    $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_CHG_BOARD_APPR);
+                    $idea->notifyActionNeeded(User::changeBoardUsers());
                 } else {
                     return view("unauthorized.index");
                 }
@@ -334,16 +408,116 @@ class IdeaController extends Controller
         } elseif ($idea->status_id == Status::$INIT_CENT_RES_APPR) {
             $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_CHG_BOARD_APPR);
             $this->setPendingAt($idea, $this->getRoleIdByName(Role::$CHG_BOARD));
+            $idea->update([
+                "expected_effort" => $request["expected-effort"]
+            ]);
+            $idea->notifyActionNeeded(User::changeBoardUsers());
+        } elseif ($idea->status_id == Status::$INIT_CHG_BOARD_APPR) {
+            if ($idea->change_type_id == ChangeType::$IT) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_IT);
+                $this->setPendingAt($idea, $this->getRoleIdByName(Role::$IT));
+                $idea->notifyActionNeeded(User::itUsers());
+            } elseif ($idea->change_type_id == ChangeType::$ORGANIZATIONAL) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_ORGANIZATIONAL);
+                $this->setPendingAt($idea, $idea->submitter_id);
+                $idea->notifyActionNeeded($idea->submitter);
+            } elseif ($idea->change_type_id == ChangeType::$BUSINESS) {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_BUSINESS);
+                $this->setPendingAt($idea, $idea->submitter_id);
+                $idea->notifyActionNeeded($idea->submitter);
+            } else {
+                $this->createCommentAndUpdateStatus($idea, $request, Status::$APPR_SME_ASSGN);
+                $this->setPendingAt($idea, $idea->submitter_id);
+                $idea->notifyActionNeeded($idea->submitter);
+            }
         } elseif ($idea->status_id == Status::$FIN_MT_APPR) {
             $this->createCommentAndUpdateStatus($idea, $request, Status::$IMPLEMENTED);
             $this->setPendingAt($idea, $idea->pending_at_id);
+            $idea->notifyRequestCompleted($idea->submitter);
         } else {
             return view("unauthorized.index");
         }
 
         session()->flash("success", "Request successfully approved.");
 
-        return redirect(route("ideas.all-active"));
+        return redirect(route("ideas.personal-que-active"));
+    }
+
+    public function assignSme(AssignSmeIdeaRequest $request, Idea $idea)
+    {
+        if ($idea->change_type_id == ChangeType::$LSS) {
+            $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_LSS);
+            $this->setPendingAt($idea, $this->getRoleIdByName(Role::$LSS));
+            $idea->notifyActionNeeded(User::lssUsers());
+        } elseif ($idea->change_type_id == ChangeType::$RPA) {
+            $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_RPA);
+            $this->setPendingAt($idea, $this->getRoleIdByName(Role::$RPA));
+            $idea->notifyActionNeeded(User::rpaUsers());
+        } elseif ($idea->change_type_id == ChangeType::$COSMOS) {
+            $this->createCommentAndUpdateStatus($idea, $request, Status::$WIP_COSMOS);
+            $this->setPendingAt($idea, $this->getRoleIdByName(Role::$COSMOS));
+            $idea->notifyActionNeeded(User::cosmosUsers());
+        } else {
+            return view("unauthorized.index");
+        }
+
+        $idea->updateSme($request, $this->getUserIdByEmail($request["sme"]));
+
+        $idea->notifyYouAreAssignedSme($idea->smeUser);
+
+        session()->flash("success", "SME successfully assigned and idea forwarded to processor team.");
+
+        return redirect()->back();
+    }
+
+    public function showFullEdit(Idea $idea)
+    {
+        return view("ideas.full-edit")
+            ->with("idea", $idea)
+            ->with("circles", Circle::orderBy('name', 'asc')->get())
+            ->with("superCricles", Supercircle::orderBy('name', 'asc')->get())
+            ->with("justifications", Justification::orderBy('name', 'asc')->get())
+            ->with("users", User::all("id","email"))
+            ->with("ragStatuses", RagStatus::all());
+    }
+
+    public function fullEdit(FullEditIdeaRequest $request, Idea $idea)
+    {
+        if($idea->expected_effort != null) {
+            $expectedEffort = $request["expected-effort"];
+        } else {
+            $expectedEffort = null;
+        }
+
+        if($idea->actual_effort != null) {
+            $actualEffort = $request["actual-effort"];
+        } else {
+            $actualEffort = null;
+        }
+
+        $idea->update([
+            "title" => $request->title,
+            "justification_id" => $request["justification"],
+            "impacted_supercircle_id" => $request["impacted-supercircle"],
+            "impacted_circle_id" => $request["impacted-circle"],
+            "expected_benefit" => $request["expected-benefit"],
+            "expected_benefit_type" => $request["expected-benefit-type"],
+            "expected_effort" => $expectedEffort,
+            "actual_effort" => $actualEffort,
+            "sme_id" => $request["sme"],
+            "description" => $request["description"],
+            "rag_status_id" => $request["rag-status"],
+            "submitter_id" => $request["submitter"]
+        ]);
+
+        $this->createCommentAndUpdateStatus($idea, $request, $idea->status_id);
+
+        $idea->notifyRequestUpdated($this->submitter);
+
+        session()->flash("success", "Idea successfully edited.");
+
+        return redirect()->back();
+        
     }
 
     public function createCommentAndUpdateStatus($idea, $request, $newStatusId)
@@ -378,16 +552,11 @@ class IdeaController extends Controller
         }
     }
 
-    public function updateIdea($request, $idea)
+    public function updateBasicInfo($request, $idea)
     {
         //Expected effort validation
         if ($request["change-type"] == ChangeType::$JUST_DO_IT) {
-            if ($request["expected-effort"]) {
-                $expectedEffort = $request["expected-effort"];
-            } else {
-                session()->flash("error", "Please fill in expected effort.");
-                return redirect()->back();
-            }
+            $expectedEffort = $request["expected-effort"];
         } else {
             $expectedEffort = $idea->expected_effort;
         }
@@ -399,8 +568,6 @@ class IdeaController extends Controller
             $attachment = "";
         }
 
-        $smeId = $this->getUserIdByEmail($request["sme"]);
-
         $idea->update([
             "change_type_id" => $request["change-type"],
             "justification_id" => $request["justification"],
@@ -409,7 +576,6 @@ class IdeaController extends Controller
             "expected_benefit" => $request["expected-benefit"],
             "expected_benefit_type" => $request["expected-benefit-type"],
             "expected_effort" => $expectedEffort,
-            "sme_id" => $smeId,
             "attachment" => $attachment,
             "description" => $request["description"]
         ]);
@@ -426,4 +592,6 @@ class IdeaController extends Controller
     {
         return Role::all()->where("name", $roleName)->first()->id;
     }
+
+    
 }

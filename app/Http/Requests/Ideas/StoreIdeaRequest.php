@@ -42,7 +42,11 @@ class StoreIdeaRequest extends FormRequest
             "description" => "required|string"
         ];
 
-        if ($this->request->get("change-type") == ChangeType::$JUST_DO_IT) {
+        if (
+            $this->request->get("change-type") == ChangeType::$JUST_DO_IT ||
+            $this->request->get("change-type") == ChangeType::$BUSINESS ||
+            $this->request->get("change-type") == ChangeType::$ORGANIZATIONAL
+        ) {
             $specificValidationRules = [
                 "expected-effort" => "required|numeric"
             ];
@@ -53,15 +57,6 @@ class StoreIdeaRequest extends FormRequest
             $this->request->get("change-type") == ChangeType::$RPA ||
             $this->request->get("change-type") == ChangeType::$COSMOS ||
             $this->request->get("change-type") == ChangeType::$IT
-        ) {
-            $specificValidationRules = [
-                "sme" => "required|email|exists:users,email"
-            ];
-
-            return array_merge($basicValidationRules, $specificValidationRules);
-        } elseif (
-            $this->request->get("change-type") == ChangeType::$BUSINESS ||
-            $this->request->get("change-type") == ChangeType::$ORGANIZATIONAL
         ) {
             return $basicValidationRules;
         }

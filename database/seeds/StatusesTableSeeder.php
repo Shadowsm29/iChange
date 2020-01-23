@@ -81,5 +81,20 @@ class StatusesTableSeeder extends Seeder
          Status::create([
             "name" => "Finalized - MT Approval"
         ]);
+
+        //15
+        Status::create([
+            "name" => "WIP - IT"
+        ]);
+
+        //16
+        Status::create([
+            "name" => "Work in Progress - Organizational"
+        ]);
+
+        //15
+        Status::create([
+            "name" => "Work in Progress - Business"
+        ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Ideas;
 
+use App\ChangeType;
 use App\Status;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -28,30 +29,56 @@ class UpdateIdeaRequest extends FormRequest
      */
     public function rules()
     {
+        $basicValidationRule = [
+            "change-type" => "required|exists:change_types,id",
+            "justification" => "required|exists:justifications,id",
+            "impacted-supercircle" => "required|exists:supercircles,id",
+            "impacted-circle" => "required|exists:circles,id",
+            "expected-benefit" => "required|numeric",
+            "expected-benefit-type" => "required|in:hours/week,euros",
+            "attachment" => "nullable|file",
+            "description" => "required|string",
+        ];
+
+        $commentValidationRule = [
+            "comment" => "required|string"
+        ];
+
+        $smeValidationRule = [
+            "sme" => "required|email|exists:users,email"
+        ];
+
+        $expectedEffortValidationRule = [
+            "expected-effort" => "required|numeric"
+        ];
+
         if ($this->idea->status_id == Status::$CORR_NEEDED) {
-            return [
-                "change-type" => "required|exists:change_types,id",
-                "justification" => "required|exists:justifications,id",
-                "impacted-supercircle" => "required|exists:supercircles,id",
-                "impacted-circle" => "required|exists:circles,id",
-                "expected-benefit" => "required|numeric",
-                "expected-benefit-type" => "required|in:hours/week,euros",
-                "expected-effort" => "nullable|numeric",
-                "sme" => "required|email|exists:users,email",
-                "attachment" => "nullable|file",
-                "description" => "required|string",
-                "comment" => "required|string"
-            ];
+
+            if (
+                $this->request->get("change-type") == ChangeType::$LSS ||
+                $this->request->get("change-type") == ChangeType::$COSMOS ||
+                $this->request->get("change-type") == ChangeType::$RPA ||
+                $this->request->get("change-type") == ChangeType::$IT
+            ) {
+                return array_merge($basicValidationRule, $commentValidationRule);
+            } elseif ($this->request->get("change-type") == ChangeType::$JUST_DO_IT) {
+                return array_merge($basicValidationRule, $commentValidationRule, $expectedEffortValidationRule);
+            } else {
+                dd("test");
+            }
+        } elseif ($this->idea->status_id == Status::$INIT_CENT_RES_APPR) {
+            return $commentValidationRule;
+        } elseif ($this->idea->status_id == Status::$APPR_SME_ASSGN) {
+            return array_merge($smeValidationRule, $commentValidationRule);
         } elseif ($this->idea->isWip()) {
-            return [
-                "comment" => "required|string",
+            $specificValidationRule = [
                 "rag-status" => "required|exists:rag_statuses,id",
                 "actual-effort" => "required|numeric"
             ];
+
+            return array_merge($commentValidationRule, $specificValidationRule);
         } else {
-            return [
-                "comment" => "required|string"
-            ];
+            return $commentValidationRule;
         }
     }
 }

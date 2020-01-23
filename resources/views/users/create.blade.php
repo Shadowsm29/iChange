@@ -44,36 +44,47 @@
                             <label class="form-check-label">Role:</label><br>
                             <div class="form-check">
                                 @if (isset($user))
-                                    @foreach ($roles as $role)
-                                        <input type="checkbox" class="form-check-input" name="role_ids[]" value="{{ $role->id }}" id="role-{{$role->id}}"
-                                        @foreach ($user->roles as $userRole)
-                                            @if ($role->name == $userRole->name)
-                                            checked
-                                            @endif
-                                        @endforeach
-                                        ><label for="role-{{$role->id}}">{{ $role->name }}</label> <br>
-                                    @endforeach
+                                @foreach ($roles as $role)
+                                <input type="checkbox" class="form-check-input" name="role_ids[]"
+                                    value="{{ $role->id }}" id="role-{{$role->id}}" @foreach ($user->roles as $userRole)
+                                @if ($role->name == $userRole->name)
+                                checked
+                                @endif
+                                @endforeach
+                                ><label for="role-{{$role->id}}">{{ $role->name }}</label> <br>
+                                @endforeach
                                 @else
-                                    @foreach ($roles as $role)
-                                    <input type="checkbox" class="form-check-input" name="role_ids[]" value="{{ $role->id }}" id="role-{{$role->id}}"><label for="role-{{$role->id}}">{{ $role->name }}</label> <br>
-                                    @endforeach
+                                @foreach ($roles as $role)
+                                <input type="checkbox" class="form-check-input" name="role_ids[]"
+                                    value="{{ $role->id }}" id="role-{{$role->id}}"><label
+                                    for="role-{{$role->id}}">{{ $role->name }}</label> <br>
+                                @endforeach
                                 @endif
                             </div>
                         </div>
-                        @if (!isset($user))
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="password">Password:</label>
-                                    <input type="password" id="password" name="password" class="form-control"
-                                        value="{{ isset($user) ? "" : "password" }}">
-                                </div>
-                                <div class="form-group">
-                                    <label for="repeat_password">Repeat Password:</label>
-                                    <input type="password" id="repeat_password" name="repeat_password" class="form-control"
-                                        value="{{ isset($user) ? "" : "password" }}">
-                                </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="manager">Select manager</label>
+                                <select name="manager" id="manager" class="form-control">
+                                    <option value=""></option>
+                                    @foreach ($allUsers as $singleUser)
+                                    <option value="{{ $singleUser->id }}" {{ $singleUser->id == $user->manager_id ? "selected" : "" }}>{{$singleUser->email}}</option>
+                                    @endforeach
+                                </select>
                             </div>
-                        @endif
+                            @if (!isset($user))
+                            <div class="form-group">
+                                <label for="password">Password:</label>
+                                <input type="password" id="password" name="password" class="form-control"
+                                    value="{{ isset($user) ? "" : "password" }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="repeat_password">Repeat Password:</label>
+                                <input type="password" id="repeat_password" name="repeat_password" class="form-control"
+                                    value="{{ isset($user) ? "" : "password" }}">
+                            </div>
+                            @endif
+                        </div>
                     </div>
 
                     <div class="text-center">

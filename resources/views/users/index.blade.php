@@ -32,7 +32,7 @@
                             <td>{{ $user->email }}</td>
                             <td>
                                 @foreach ($user->roles as $role)
-                                <p>{{ $role->name }}</p>
+                                <li style="list-style: none">{{ $role->name }}</li>
                                 @endforeach
                             </td>
                             <td>
@@ -70,6 +70,9 @@
                     <h3>No trashed users currently.</h3>
                 </div>
                 @endif
+            </div>
+            <div class="d-flex" style="justify-content: center">
+                {{ $users->links() }}
             </div>
         </div>
     </div>

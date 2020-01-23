@@ -24,11 +24,19 @@
                     <button formaction="{{ route("ideas.approve", $idea->id) }}"
                         class="btn btn-success">Approve</button>
                     <button formaction="{{ route("ideas.decline", $idea->id) }}" class="btn btn-danger">Decline</button>
-                    <button formaction="{{ route("ideas.back-to-submitter", $idea->id) }}" class="btn btn-danger">Back to
-                        Submitter</button>
+                    <button formaction="{{ route("ideas.back-to-submitter", $idea->id) }}" class="btn btn-danger">
+                        @if (isset($mtApprove))
+                            Back to Processor
+                        @else
+                            Back to Submitter
+                        @endif
+                    </button>
                     @endif
                     @if (isset($forward))
                     <button formaction="{{ route("ideas.update-resubmit", $idea->id) }}" class="btn btn-success">Re-submit</button>
+                    @endif
+                    @if (isset($assignSme))
+                    <button formaction="{{ route("ideas.assign-sme", $idea->id) }}" class="btn btn-success">Assign SME</button>
                     @endif
                     @if (isset($complete))
                     <button formaction="{{ route("ideas.update-complete", $idea->id) }}" class="btn btn-success">Complete</button>
@@ -41,47 +49,35 @@
                         idea</button>
                     @endif
                 </div>
-                <a href="{{ route("ideas.all-ideas") }}" class="btn btn-primary ml-2">Back to list</a>
+                @if (URL::previous() == URL::current())
+                <a href="{{ route("ideas.personal-que-active") }}" class="btn btn-primary ml-2">Back to personal queue</a>
+                @else
+                <a href="{{ URL::previous() }}" class="btn btn-primary ml-2">Back to list</a>
+                @endif
             </div>
 
             <div class="alert alert-danger mt-2">
                 <button formaction="{{ route("ideas.approve", $idea->id) }}" class="btn btn-success">Approve</button>
                 <button formaction="{{ route("ideas.decline", $idea->id) }}" class="btn btn-danger">Decline</button>
-                <button formaction="{{ route("ideas.back-to-submitter", $idea->id) }}" class="btn btn-danger">Back to
-                    Submitter</button>
+                <button formaction="{{ route("ideas.back-to-submitter", $idea->id) }}" class="btn btn-danger">
+                    @if (isset($mtApprove))
+                        Back to Processor
+                    @else
+                        Back to Submitter
+                    @endif
+                </button>
                 <button formaction="{{ route("ideas.update-resubmit", $idea->id) }}" class="btn btn-success">Re-submit</button>
                 <button formaction="{{ route("ideas.update-complete", $idea->id) }}" class="btn btn-success">Complete</button>
                 <button formaction="{{ route("ideas.update", $idea->id) }}" class="btn btn-primary">Update</button>
                 <button formaction="{{ route("ideas.cancel", $idea->id) }}" class="btn btn-danger">Cancel idea</button>
+                <button formaction="{{ route("ideas.assign-sme", $idea->id) }}" class="btn btn-success">Assign SME</button>
             </div>
         </form>
     </div>
 </div>
 
-@if ($idea->comments()->count() > 0)
-<div class="card mt-3">
-    <div class="card-header">Comments</div>
-    <div class="card-body">
-        @foreach ($idea->comments as $comment)
-        <div class="card mb-2">
-            <div class="card-header d-flex" style="justify-content: space-between">
-                <div>
-                    Updated by <strong>{{ $comment->owner->name }}</strong> (Status:
-                    <strong>{{ $comment->oldStatus->name }}</strong> ->
-                    <strong>{{ $comment->newStatus->name }}</strong>)
-                </div>
-                <div>
-                    {{ $comment->created_at }}
-                </div>
-            </div>
-            <div class="card-body">
-                {{ $comment->comment }}
-            </div>
-        </div>
-        @endforeach
-    </div>
-</div>
-@endif
+@include('ideas.partials.show-comments')
+
 @endsection
 
 @if (isset($edit))

@@ -26,6 +26,7 @@ class CreateUserRequest extends FormRequest
         return [
             "name" => "required|string",
             "email" => "required|email|unique:users",
+            "manager" => "required|exists:users,id",
             "password" => "required|string",
             "repeat_password" => "required|same:password"
         ];

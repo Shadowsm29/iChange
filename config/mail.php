@@ -56,8 +56,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', 'Example'),
+        'address' => env('MAIL_FROM_ADDRESS', 'iChange@ing.com'),
+        'name' => env('MAIL_FROM_NAME', 'iChange'),
     ],
 
     /*
@@ -132,5 +132,8 @@ return [
     */
 
     'log_channel' => env('MAIL_LOG_CHANNEL'),
+
+    //limiting e-mails/second
+    'throttleToMessagesPerMin' => env('MAIL_THROTTLE_TO_MESSAGES_PER_MIN', null), //https://mailtrap.io has a rate limit of 2 emails/sec per inbox, but consider being even more conservative.
 
 ];

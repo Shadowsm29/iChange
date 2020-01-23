@@ -20,4 +20,7 @@ class Status extends Model
     public static $IMPLEMENTED = 12;
     public static $DECLINED = 13;
     public static $FIN_MT_APPR = 14;
+    public static $WIP_IT = 15;
+    public static $WIP_ORGANIZATIONAL = 16;
+    public static $WIP_BUSINESS = 17;
 }

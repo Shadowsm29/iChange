@@ -92,10 +92,30 @@
                         @endif
 
                         @if (auth()->user()->isIdeaProcessor())
-                        <li class="nav-item"><a class="nav-link" href="{{ route('ideas.personal-que') }}">Personal
-                                Queue</a></li>
+
+                        <li class="nav-item dropdown">
+                            <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button"
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                                Personal Queue<span class="caret"></span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                                <a class="dropdown-item" href="{{ route('ideas.personal-que-active') }}">Personal Queue
+                                    (Active)</a>
+                                <a class="dropdown-item" href="{{ route('ideas.personal-que-all') }}">Personal Queue
+                                    (All)</a>
+                            </div>
+                        </li>
 
                         @endif
+
+                        <li class="nav-item"><a class="nav-link" href="{{ route('notifications.index') }}">
+                                Notifications
+                                @if (auth()->user()->unreadNotifications->count() > 0)
+                                <span class="badge badge-info" style="background-color: rgb(255, 98, 0);color: white;">
+                                    {{ auth()->user()->unreadNotifications->count() }} unread
+                                </span>
+                                @endif
+                            </a></li>
 
                         @if (auth()->user()->isPrivilegedUser())
                         @if (auth()->user()->isIam())

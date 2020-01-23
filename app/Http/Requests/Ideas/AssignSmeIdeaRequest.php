@@ -5,7 +5,7 @@ namespace App\Http\Requests\Ideas;
 use App\Status;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ApproveIdeaRequest extends FormRequest
+class AssignSmeIdeaRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -14,12 +14,11 @@ class ApproveIdeaRequest extends FormRequest
      */
     public function authorize()
     {
-        if ($this->idea->isAssignedToUser() && $this->idea->isApprovalAction()) {
+        if ($this->idea->isAssignedToUser() && $this->idea->isOpen() && $this->idea->status_id == Status::$APPR_SME_ASSGN) {
             return true;
-         } 
-         else {
-             return false;
-         }
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -33,14 +32,10 @@ class ApproveIdeaRequest extends FormRequest
             "comment" => "required|string"
         ];
 
-        $expectedEffortValidationRule = [
-            "expected-effort" => "required|numeric"
+        $smeValidationRule = [
+            "sme" => "required|email|exists:users,email"
         ];
 
-        if($this->idea->status_id == Status::$INIT_CENT_RES_APPR) {
-            return array_merge($expectedEffortValidationRule, $commentValidationRule);
-        } else {
-            return $commentValidationRule;
-        }
+        return array_merge($smeValidationRule, $commentValidationRule);
     }
 }

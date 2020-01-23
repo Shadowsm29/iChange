@@ -1,68 +1,110 @@
-function displaySme(lss, rpa, cosmos, it) {
+function enableSme(sme, validValues) {
     var changeTypeEl = "#change-type";
-    var smediv = "#sme-div";
+    var smeEl = "#sme";
 
-    if($(changeTypeEl).val() == lss || $(changeTypeEl).val() == rpa || $(changeTypeEl).val() == cosmos || $(changeTypeEl).val() == it) {
-        $(smediv).show();
-    }
-    else {
-        $(smediv).hide();
+    for (var i = 0; i < validValues.length; i++) {
+        if ($(changeTypeEl).val() == validValues[i]) {
+            $(smeEl).removeAttr('disabled');
+            break;
+        }
+        else {
+            $(smeEl).attr('disabled', true);
+        }
     }
 
     $(changeTypeEl).change(function () {
-        if($(this).val() == lss || $(this).val() == rpa || $(this).val() == cosmos || $(this).val() == it) {
+        for (var i = 0; i < validValues.length; i++) {
+            if ($(changeTypeEl).val() == validValues[i]) {
+                $(smeEl).removeAttr('disabled');
+                break;
+            }
+            else {
+                $(smeEl).attr('disabled', true);
+                $(smeEl).val(sme);
+            }
+        }
+    });
+}
+
+function displaySme(validValues) {
+    var changeTypeEl = "#change-type";
+    var smediv = "#sme-div";
+
+    for (var i = 0; i < validValues.length; i++) {
+        if ($(changeTypeEl).val() == validValues[i]) {
             $(smediv).show();
+            break;
         }
         else {
             $(smediv).hide();
         }
+    }
+
+    $(changeTypeEl).change(function () {
+        for (var i = 0; i < validValues.length; i++) {
+            if ($(changeTypeEl).val() == validValues[i]) {
+                $(smediv).show();
+                break;
+            }
+            else {
+                $(smediv).hide();
+            }
+        }
     });
 }
 
-function displayExpectedEffort(justDoIt) {
+function displayExpectedEffort(validValues) {
     var expEffortDiv = "#expected-effort-div";
     var changeTypeEl = "#change-type";
 
-    if($(changeTypeEl).val() == justDoIt) {
-        $(expEffortDiv).show();
-    }
-    else {
-        $(expEffortDiv).hide();
-    }
-    
-    $(changeTypeEl).change(function () {
-        if (this.value == justDoIt) {
+    for (var i = 0; i < validValues.length; i++) {
+        if ($(changeTypeEl).val() == validValues[i]) {
             $(expEffortDiv).show();
+            break;
         }
         else {
             $(expEffortDiv).hide();
         }
+    }
+
+    $(changeTypeEl).change(function () {
+        for (var i = 0; i < validValues.length; i++) {
+            if ($(changeTypeEl).val() == validValues[i]) {
+                $(expEffortDiv).show();
+                break;
+            }
+            else {
+                $(expEffortDiv).hide();
+            }
+        }
     });
 }
 
-function enableExpectedEffort(expectedEffort) {
+function enableExpectedEffort(expectedEffort, validValues) {
 
     var changeTypeEl = "#change-type";
     var expEffortEl = "#expected-effort";
 
-    if ($(changeTypeEl).val() == 5) {
-        //JUST DO IT
-        $(expEffortEl).removeAttr('disabled');
-    }
-    else {
-        //Other types
-        $(expEffortEl).attr('disabled',true);
+    for (var i = 0; i < validValues.length; i++) {
+        if ($(changeTypeEl).val() == validValues[i]) {
+            $(expEffortEl).removeAttr('disabled');
+            break;
+        }
+        else {
+            $(expEffortEl).attr('disabled', true);
+        }
     }
 
     $(changeTypeEl).change(function () {
-        if (this.value == 5) {
-            //JUST DO IT
-            $(expEffortEl).removeAttr('disabled');
-        }
-        else {
-            //Other types
-            $(expEffortEl).attr('disabled',true);
-            $(expEffortEl).val(expectedEffort);
+        for (var i = 0; i < validValues.length; i++) {
+            if ($(changeTypeEl).val() == validValues[i]) {
+                $(expEffortEl).removeAttr('disabled');
+                break;
+            }
+            else {
+                $(expEffortEl).attr('disabled', true);
+                $(expEffortEl).val(expectedEffort);
+            }
         }
     });
 }

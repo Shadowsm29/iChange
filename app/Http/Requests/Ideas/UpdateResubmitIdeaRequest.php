@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Ideas;
 
+use App\ChangeType;
 use App\Status;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -28,18 +29,35 @@ class UpdateResubmitIdeaRequest extends FormRequest
      */
     public function rules()
     {
-        return [
+        $basicValidationRules = [
             "change-type" => "required|exists:change_types,id",
             "justification" => "required|exists:justifications,id",
             "impacted-supercircle" => "required|exists:supercircles,id",
             "impacted-circle" => "required|exists:circles,id",
             "expected-benefit" => "required|numeric",
             "expected-benefit-type" => "required|in:hours/week,euros",
-            "expected-effort" => "nullable|numeric",
-            "sme" => "required|email|exists:users,email",
             "attachment" => "nullable|file",
-            "description" => "required|string",
-            "comment" => "required|string"
+            "description" => "required|string"
         ];
+
+        if ($this->request->get("change-type") == ChangeType::$JUST_DO_IT) {
+            $specificValidationRules = [
+                "expected-effort" => "required|numeric"
+            ];
+
+            return array_merge($basicValidationRules, $specificValidationRules);
+        } elseif (
+            $this->request->get("change-type") == ChangeType::$LSS ||
+            $this->request->get("change-type") == ChangeType::$RPA ||
+            $this->request->get("change-type") == ChangeType::$COSMOS ||
+            $this->request->get("change-type") == ChangeType::$IT
+        ) {
+            return $basicValidationRules;
+        } elseif (
+            $this->request->get("change-type") == ChangeType::$BUSINESS ||
+            $this->request->get("change-type") == ChangeType::$ORGANIZATIONAL
+        ) {
+            return $basicValidationRules;
+        }
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http;
 use App\Http\Middleware\AdminArea;
 use App\Http\Middleware\BackendManagement;
 use App\Http\Middleware\BusinessUsers;
+use App\Http\Middleware\CanEditIdeas;
 use App\Http\Middleware\CheckAllIdeas;
 use App\Http\Middleware\IdeaProcessor;
 use App\Http\Middleware\IdeaSubmitter;
@@ -76,7 +77,8 @@ class Kernel extends HttpKernel
         "idea_submitter" => IdeaSubmitter::class,
         "all_ideas" => CheckAllIdeas::class,
         "idea_processor" => IdeaProcessor::class,
-        "business_users" => BusinessUsers::class
+        "business_users" => BusinessUsers::class,
+        "can_edit_ideas" => CanEditIdeas::class
     ];
 
     /**

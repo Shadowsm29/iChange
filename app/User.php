@@ -32,7 +32,7 @@ class User extends Authenticatable
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password', "role", "is_expired"
+        'name', 'email', 'password', "role", "is_expired", "manager_id"
     ];
 
     /**
@@ -61,6 +61,11 @@ class User extends Authenticatable
     public function ideas()
     {
         return $this->hasMany(Idea::class, "submitter_id")->orderBy("created_at", "desc");
+    }
+
+    public function manager()
+    {
+        return $this->belongsTo(User::class, "manager_id");
     }
 
     public function isIam()
@@ -143,6 +148,11 @@ class User extends Authenticatable
         return $this->isMt() || $this->isCentralResources() || $this->isChangeBoard();
     }
 
+    public function canFullyEditIdea()
+    {
+        return $this->isRpa() || $this->isMt();
+    }
+
     public function isIdeaProcessor()
     {
         return $this->isCentralResources() || 
@@ -161,5 +171,75 @@ class User extends Authenticatable
         }
         
         return false;
+    }
+
+    public function getAuthorizationIds()
+    {
+        $authorizedArr = [$this->id];
+
+        $users = User::all();
+
+        //Getting manager's team members
+        foreach ($users as $user) {
+            if($user->manager_id == $this->id) {
+                array_push($authorizedArr, $user->id);
+            } 
+        }
+
+        //Getting all user roles
+        foreach ($this->roles as $role) {
+            array_push($authorizedArr, $role->id);
+        }
+
+        return $authorizedArr;
+    } 
+
+    public function scopeMtUsers($query)
+    {
+        return $query->whereHas("roles", function($q) {
+            $q->where("name", Role::$MT);
+        })->get();
+    }
+
+    public function scopeCentralResourcesUsers($query)
+    {
+        return $query->whereHas("roles", function($q) {
+            $q->whereIn("name", [Role::$RPA, Role::$LSS, Role::$COSMOS, Role::$IT]);
+        })->get();
+    }
+
+    public function scopeChangeBoardUsers($query)
+    {
+        return $query->whereHas("roles", function($q) {
+            $q->where("name", Role::$CHG_BOARD);
+        })->get();
+    }
+
+    public function scopeRpaUsers($query)
+    {
+        return $query->whereHas("roles", function($q) {
+            $q->where("name", Role::$RPA);
+        })->get();
+    }
+
+    public function scopeLssUsers($query)
+    {
+        return $query->whereHas("roles", function($q) {
+            $q->where("name", Role::$LSS);
+        })->get();
+    }
+
+    public function scopeCosmosUsers($query)
+    {
+        return $query->whereHas("roles", function($q) {
+            $q->where("name", Role::$COSMOS);
+        })->get();
+    }
+
+    public function scopeItUsers($query)
+    {
+        return $query->whereHas("roles", function($q) {
+            $q->where("name", Role::$IT);
+        })->get();
     }
 }

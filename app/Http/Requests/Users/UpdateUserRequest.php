@@ -26,6 +26,7 @@ class UpdateUserRequest extends FormRequest
         return [
             "name" => "required|string",
             "role_ids" => "required|exists:roles,id",
+            "manager" => "required|exists:users,id"
         ];
     }
 }

@@ -15,9 +15,9 @@
                         <th>Project Name</th>
                         <th>Submitted by</th>
                         <th>Change Type</th>
-                        <th>Justification</th>
-                        <th>Supercircle</th>
-                        <th>Cricle</th>
+                        {{-- <th>Justification</th> --}}
+                        {{-- <th>Supercircle</th>
+                        <th>Cricle</th> --}}
                         <th>Expected benefit</th>
                         <th>Benefit in</th>
                         <th>Expected effort</th>
@@ -30,13 +30,13 @@
                         @if (count($ideas) > 0)
                         @foreach ($ideas as $idea)
                         <tr>
-                            <td>{{ $idea->id }}</td>
+                            <td>{{ $idea->getReqIdAsString() }}</td>
                             <td>{{ $idea->title }}</td>
                             <td>{{ $idea->submitter->name }}</td>
                             <td>{{ $idea->changeType->name }}</td>
-                            <td>{{ $idea->justification->name }}</td>
-                            <td>{{ $idea->supercircle->name }}</td>
-                            <td>{{ $idea->circle->name }}</td>
+                            {{-- <td>{{ $idea->justification->name }}</td> --}}
+                            {{-- <td>{{ $idea->supercircle->name }}</td>
+                            <td>{{ $idea->circle->name }}</td> --}}
                             <td>{{ $idea->expected_benefit }}</td>
                             <td>{{ $idea->expected_benefit_type }}</td>
                             <td>{{ $idea->expected_effort }}</td>
@@ -45,12 +45,7 @@
                             <td>{{ $idea->status->name }}</td>
                             <td>
                                 <a href="{{ route("ideas.display", $idea) }}" class="btn btn-primary btn-sm">Open</a>
-
-                                <!-- Button trigger modal -->
-                                <button type="button" class="btn btn-danger btn-sm delete-button" data-toggle="modal"
-                                    data-target="#delete-idea-modal">
-                                    Delete
-                                </button>
+                                <a href="{{ route("ideas.show-full-edit", $idea) }}" class="btn btn-success btn-sm" style="color: white">Edit</button>
                             </td>
                         </tr>
                         @endforeach
@@ -63,12 +58,13 @@
                 </div>
                 @endif
             </div>
+            <div class="d-flex" style="justify-content: center">{{ $ideas->links() }}</div>
         </div>
     </div>
 </div>
 
 <!-- Modal -->
-<div class="modal fade" id="delete-idea-modal" tabindex="-1" role="dialog" aria-labelledby="delete-idea-modal"
+{{-- <div class="modal fade" id="delete-idea-modal" tabindex="-1" role="dialog" aria-labelledby="delete-idea-modal"
     aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -96,7 +92,7 @@
             </div>
         </div>
     </div>
-</div>
+</div> --}}
 
 @endsection
 
