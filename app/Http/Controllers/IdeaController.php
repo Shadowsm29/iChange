@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Attachment;
 use App\ChangeType;
 use App\Circle;
 use App\Comment;
@@ -58,7 +59,7 @@ class IdeaController extends Controller
     {
         $authorizedArr = auth()->user()->getAuthorizationIds();
 
-        $ideas = Idea::orderBy("created_at", "desc")->assignedTo($authorizedArr)->orIsSme(auth()->user()->id)->isOpen()->paginate(10);
+        $ideas = Idea::orderBy("created_at", "desc")->assignedToOrIsSme($authorizedArr, auth()->user()->id)->isOpen()->paginate(10);
 
         return view("ideas.all-ideas")
             ->with("ideas", $ideas)
@@ -69,7 +70,7 @@ class IdeaController extends Controller
     {
         $authorizedArr = auth()->user()->getAuthorizationIds();
 
-        $ideas = Idea::orderBy("created_at", "desc")->assignedTo($authorizedArr)->orIsSme(auth()->user()->id)->paginate(10);
+        $ideas = Idea::orderBy("created_at", "desc")->assignedToOrIsSme($authorizedArr, auth()->user()->id)->paginate(10);
 
         return view("ideas.all-ideas")
             ->with("ideas", $ideas)
@@ -106,12 +107,6 @@ class IdeaController extends Controller
      */
     public function store(StoreIdeaRequest $request)
     {
-        //Handling attachment
-        if ($request->hasFile("attachment")) {
-            $attachment = $request->file("attachment")->storeAs("attachments", $request->file("attachment")->getClientOriginalName());
-        } else {
-            $attachment = "";
-        }
 
         //Deciding next step based on change type
         if ($request["change-type"] == ChangeType::$JUST_DO_IT) {
@@ -132,12 +127,13 @@ class IdeaController extends Controller
             "expected_benefit" => $request["expected-benefit"],
             "expected_benefit_type" => $request["expected-benefit-type"],
             "expected_effort" => $request["expected-effort"],
-            "sme_id" => $sme = auth()->user()->id,
+            "sme_id" => auth()->user()->id,
             "pending_at_id" => $pendingAt,
             "status_id" => $status,
-            "attachment" => $attachment,
             "description" => $request["description"],
         ]);
+
+        $this->uploadAttachment($request, $idea);
 
         $idea->notifyNewIdea(auth()->user());
 
@@ -218,11 +214,12 @@ class IdeaController extends Controller
         } elseif (
             auth()->user()->canSeeAllIdeas() ||
             auth()->user()->id == $idea->submitter_id ||
-            auth()->user()->id == $idea->sme_id
+            auth()->user()->id == $idea->sme_id ||
+            auth()->user()->id == $idea->submitter->manager->id
         ) {
             return view("ideas.display-view")->with("idea", $idea);
         } else {
-            return view("unauthorized.index");
+            abort(403, "Unauthorized access");
         }
     }
 
@@ -236,6 +233,7 @@ class IdeaController extends Controller
     {
         if ($idea->status_id == Status::$CORR_NEEDED) {
             $this->updateBasicInfo($request, $idea);
+            $this->uploadAttachment($request, $idea);
 
             if ($request["change-type"] == ChangeType::$JUST_DO_IT) {
                 $this->createCommentAndUpdateStatus($idea, $request, Status::$INIT_LINE_MAN_APPR);
@@ -283,6 +281,7 @@ class IdeaController extends Controller
     {
         if ($idea->status_id == Status::$CORR_NEEDED) {
             $this->updateBasicInfo($request, $idea);
+            $this->uploadAttachment($request, $idea);
         } elseif ($idea->status_id == Status::$INIT_MT_APPR || $idea->status_id == Status::$INIT_CHG_BOARD_APPR || $idea->status_id == Status::$FIN_MT_APPR) {
             //update only comments - after if section
         } elseif ($idea->status_id == Status::$APPR_SME_ASSGN) {
@@ -477,19 +476,19 @@ class IdeaController extends Controller
             ->with("circles", Circle::orderBy('name', 'asc')->get())
             ->with("superCricles", Supercircle::orderBy('name', 'asc')->get())
             ->with("justifications", Justification::orderBy('name', 'asc')->get())
-            ->with("users", User::all("id","email"))
+            ->with("users", User::all("id", "email"))
             ->with("ragStatuses", RagStatus::all());
     }
 
     public function fullEdit(FullEditIdeaRequest $request, Idea $idea)
     {
-        if($idea->expected_effort != null) {
+        if ($idea->expected_effort != null) {
             $expectedEffort = $request["expected-effort"];
         } else {
             $expectedEffort = null;
         }
 
-        if($idea->actual_effort != null) {
+        if ($idea->actual_effort != null) {
             $actualEffort = $request["actual-effort"];
         } else {
             $actualEffort = null;
@@ -512,12 +511,11 @@ class IdeaController extends Controller
 
         $this->createCommentAndUpdateStatus($idea, $request, $idea->status_id);
 
-        $idea->notifyRequestUpdated($this->submitter);
+        $idea->notifyRequestUpdated($idea->submitter);
 
         session()->flash("success", "Idea successfully edited.");
 
         return redirect()->back();
-        
     }
 
     public function createCommentAndUpdateStatus($idea, $request, $newStatusId)
@@ -576,7 +574,6 @@ class IdeaController extends Controller
             "expected_benefit" => $request["expected-benefit"],
             "expected_benefit_type" => $request["expected-benefit-type"],
             "expected_effort" => $expectedEffort,
-            "attachment" => $attachment,
             "description" => $request["description"]
         ]);
     }
@@ -593,5 +590,19 @@ class IdeaController extends Controller
         return Role::all()->where("name", $roleName)->first()->id;
     }
 
-    
+    public function uploadAttachment($request, $idea)
+    {
+        if ($request->hasFile("attachments")) {
+            $attachments = $request->file("attachments");
+            foreach ($attachments as $attachment) {
+                $fileName = $attachment->getClientOriginalName();
+                $path = $attachment->storeAs("attachments", $fileName);
+                Attachment::create([
+                    "idea_id" => $idea->id,
+                    "name" => $fileName,
+                    "path" => $path
+                ]);
+            }
+        }
+    }
 }

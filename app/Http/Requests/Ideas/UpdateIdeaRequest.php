@@ -36,7 +36,7 @@ class UpdateIdeaRequest extends FormRequest
             "impacted-circle" => "required|exists:circles,id",
             "expected-benefit" => "required|numeric",
             "expected-benefit-type" => "required|in:hours/week,euros",
-            "attachment" => "nullable|file",
+            "attachments.*" => "nullable|file|max:10000",
             "description" => "required|string",
         ];
 
@@ -63,8 +63,13 @@ class UpdateIdeaRequest extends FormRequest
                 return array_merge($basicValidationRule, $commentValidationRule);
             } elseif ($this->request->get("change-type") == ChangeType::$JUST_DO_IT) {
                 return array_merge($basicValidationRule, $commentValidationRule, $expectedEffortValidationRule);
+            } elseif (
+                $this->request->get("change-type") == ChangeType::$BUSINESS ||
+                $this->request->get("change-type") == ChangeType::$ORGANIZATIONAL
+            ) {
+                return array_merge($basicValidationRule, $commentValidationRule, $expectedEffortValidationRule);
             } else {
-                dd("test");
+                abort(403, 'Unauthorized action.');
             }
         } elseif ($this->idea->status_id == Status::$INIT_CENT_RES_APPR) {
             return $commentValidationRule;

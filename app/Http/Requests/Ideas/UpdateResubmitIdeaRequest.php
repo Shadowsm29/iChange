@@ -36,7 +36,7 @@ class UpdateResubmitIdeaRequest extends FormRequest
             "impacted-circle" => "required|exists:circles,id",
             "expected-benefit" => "required|numeric",
             "expected-benefit-type" => "required|in:hours/week,euros",
-            "attachment" => "nullable|file",
+            "attachments.*" => "nullable|file|max:10000",
             "description" => "required|string"
         ];
 

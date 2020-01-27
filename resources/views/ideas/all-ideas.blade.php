@@ -45,7 +45,9 @@
                             <td>{{ $idea->status->name }}</td>
                             <td>
                                 <a href="{{ route("ideas.display", $idea) }}" class="btn btn-primary btn-sm">Open</a>
-                                <a href="{{ route("ideas.show-full-edit", $idea) }}" class="btn btn-success btn-sm" style="color: white">Edit</button>
+                                @if (auth()->user()->canFullyEditIdea())
+                                <a href="{{ route("ideas.show-full-edit", $idea) }}" class="btn btn-success btn-sm" style="color: white">Edit</a>
+                                @endif
                             </td>
                         </tr>
                         @endforeach

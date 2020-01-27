@@ -39,7 +39,8 @@ class FullEditIdeaRequest extends FormRequest
             "rag-status" => "required|exists:rag_statuses,id",
             "comment" => "required|string",
             "sme" => "required|exists:users,id",
-            "submitter" => "required|exists:users,id"
+            "submitter" => "required|exists:users,id",
+            "attachments.*" => "nullable|file|max:10000",
         ];
 
         $expectedEffortValidationRule = [

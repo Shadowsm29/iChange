@@ -30,7 +30,6 @@ class CreateIdeasTable extends Migration
             $table->string('sme_id');
             $table->uuid('pending_at_id');
             $table->integer('status_id');
-            $table->string('attachment')->nullable();
             $table->text('description');
             $table->timestamps();
         });

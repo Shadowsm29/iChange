@@ -18,7 +18,7 @@
             <select name="change-type" id="change-type" class="form-control">
                 @foreach ($changeTypes as $changeType)
                 @if ($changeType->id == $idea->change_type_id)
-                <option value="{{ $changeType->id }}"S>
+                <option value="{{ $changeType->id }}" S>
                     {{ $changeType->name }}</option>
                 @endif
                 @endforeach
@@ -92,18 +92,9 @@
             <input type="text" name="submitter" id="submitter" class="form-control" value="{{ $idea->submitter->name }}"
                 disabled>
         </div>
-    </div>
-</div>
-
-<div class="form-group">
-    <div class="row">
-        {{-- <div class="col-md-6">
+        <div class="col-md-6">
             <label for="sme">SME:</label>
-            <input type="text" name="sme" id="sme" class="form-control" value="{{ $idea->smeUser->email }}">
-        </div> --}}
-        <div class="col-md-12">
-            <label for="attachment">Attachment:</label>
-            {{-- <input type="file" class="form-control-file" id="attachment" name="attachment"> --}}
+            <input type="text" name="sme" id="sme" class="form-control" value="{{ $idea->smeUser->name }}" disabled>
         </div>
     </div>
 </div>
@@ -122,6 +113,8 @@
         </div>
     </div>
 </div>
+
+@include('ideas.partials.delete-attachments')
 
 <div class="form-group">
     <div class="row">

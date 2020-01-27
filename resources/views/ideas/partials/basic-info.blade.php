@@ -31,7 +31,8 @@
         <div class="col-md-3">
             <label for="expected-effort">Expected effort in hours:</label>
             @if (isset($centralResources))
-            <input type="text" name="expected-effort" id="expected-effort" class="form-control" value="{{ $idea->expected_effort }}">
+            <input type="text" name="expected-effort" id="expected-effort" class="form-control"
+                value="{{ $idea->expected_effort }}">
             @else
             <input type="text" name="expected-effort" id="expected-effort" class="form-control"
                 value="{{ $idea->expected_effort }}" disabled>
@@ -62,11 +63,6 @@
             <input type="text" name="submitter" id="submitter" class="form-control" value="{{ $idea->submitter->name }}"
                 disabled>
         </div>
-    </div>
-</div>
-
-<div class="form-group">
-    <div class="row">
         <div class="col-md-6">
             <label for="sme">SME:</label>
             @if (isset($assignSme))
@@ -74,10 +70,6 @@
             @else
             <input type="text" name="sme" id="sme" class="form-control" value="{{ $idea->smeUser->name }}" disabled>
             @endif
-        </div>
-        <div class="col-md-6">
-            <label for="attachment">Attachment:</label>
-            {{-- <input type="file" class="form-control-file" id="attachment" name="attachment"> --}}
         </div>
     </div>
 </div>
@@ -116,6 +108,25 @@
     </div>
 </div>
 @endif
+
+<div class="form-group">
+    <div class="row">
+        <div class="col-md-6">
+            <label for="attachment">Attachments:</label> <br>
+            @if ($idea->attachments->count() > 0)
+            <ul class="list-group">
+                @foreach ($idea->attachments as $attachment)
+                <li class="list-group-item">
+                    <a href="{{ route("attachments.download", [$idea, $attachment]) }}">{{ $attachment->name }}</a>
+                </li>
+                @endforeach
+            </ul>
+            @else
+            No attachments available
+            @endif
+        </div>
+    </div>
+</div>
 
 <div class="form-group">
     <div class="row">

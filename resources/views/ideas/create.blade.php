@@ -106,8 +106,8 @@
                         </div>
                     </div> --}}
                     <div class="col-md-12">
-                        <label for="attachment">Attachment:</label>
-                        <input type="file" class="form-control-file" id="attachment" name="attachment">
+                        <label for="attachments">Attachments:</label>
+                        <input type="file" class="form-control-file" id="attachments" name="attachments[]" multiple>
                     </div>
                 </div>
             </div>

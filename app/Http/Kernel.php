@@ -7,6 +7,8 @@ use App\Http\Middleware\BackendManagement;
 use App\Http\Middleware\BusinessUsers;
 use App\Http\Middleware\CanEditIdeas;
 use App\Http\Middleware\CheckAllIdeas;
+use App\Http\Middleware\DeleteAttachment;
+use App\Http\Middleware\DownloadAttachments;
 use App\Http\Middleware\IdeaProcessor;
 use App\Http\Middleware\IdeaSubmitter;
 use App\Http\Middleware\PasswordExpired;
@@ -78,7 +80,9 @@ class Kernel extends HttpKernel
         "all_ideas" => CheckAllIdeas::class,
         "idea_processor" => IdeaProcessor::class,
         "business_users" => BusinessUsers::class,
-        "can_edit_ideas" => CanEditIdeas::class
+        "can_edit_ideas" => CanEditIdeas::class,
+        "download_attachment" => DownloadAttachments::class,
+        "delete_attachment" => DeleteAttachment::class
     ];
 
     /**

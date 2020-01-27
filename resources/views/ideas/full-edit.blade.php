@@ -4,14 +4,15 @@
 <div class="card" style="border: none">
     <div class="card-header bg-success">Edit idea</div>
     <div class="card-body" style="border: 1px solid rgb(255, 98, 0)">
-        <form action="{{ route('ideas.full-edit', $idea) }}" method="POST" enctype="multipart/form-data">
+        <form action="" method="POST" enctype="multipart/form-data">
             @csrf
             @method("PUT")
             <div class="form-group">
                 <div class="row">
                     <div class="col-md-2">
                         <label for="id">ID:</label>
-                        <input type="text" name="id" id="id" class="form-control" value="{{ $idea->getReqIdAsString() }}" disabled>
+                        <input type="text" name="id" id="id" class="form-control"
+                            value="{{ $idea->getReqIdAsString() }}" disabled>
                     </div>
                     <div class="col-md-10">
                         <label for="title">Title:</label>
@@ -46,7 +47,9 @@
                         <select name="impacted-supercircle" id="impacted-supercircle" class="form-control">
                             <option value=""></option>
                             @foreach ($superCricles as $superCricle)
-                            <option value="{{ $superCricle->id }}" {{ $idea->superCircle->id == $superCricle->id ? "selected" : "" }}>{{ $superCricle->name }}</option>
+                            <option value="{{ $superCricle->id }}"
+                                {{ $idea->superCircle->id == $superCricle->id ? "selected" : "" }}>
+                                {{ $superCricle->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -54,7 +57,8 @@
                         <label for="impacted-circle">Impacted circle:</label>
                         <select name="impacted-circle" id="impacted-circle" class="form-control">
                             @foreach ($circles as $circle)
-                            <option value="{{ $circle->id }}" {{ $idea->circle->id == $circle->id ? "selected" : "" }}>{{ $circle->name }}</option>
+                            <option value="{{ $circle->id }}" {{ $idea->circle->id == $circle->id ? "selected" : "" }}>
+                                {{ $circle->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -96,26 +100,19 @@
                         <label for="submitter">Submitted by:</label>
                         <select name="submitter" id="submitter" class="form-control">
                             @foreach ($users as $user)
-                            <option value="{{ $user->id }}" {{ $idea->submitter->id == $user->id ? "selected" : "" }}>{{ $user->email }}</option>
+                            <option value="{{ $user->id }}" {{ $idea->submitter->id == $user->id ? "selected" : "" }}>
+                                {{ $user->email }}</option>
                             @endforeach
                         </select>
                     </div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div class="row">
                     <div class="col-md-6">
                         <label for="sme">SME:</label>
                         <select name="sme" id="sme" class="form-control">
                             @foreach ($users as $user)
-                            <option value="{{ $user->id }}" {{ $idea->smeUser->id == $user->id ? "selected" : "" }}>{{ $user->email }}</option>
+                            <option value="{{ $user->id }}" {{ $idea->smeUser->id == $user->id ? "selected" : "" }}>
+                                {{ $user->email }}</option>
                             @endforeach
                         </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="attachment">Attachment:</label>
-                        {{-- <input type="file" class="form-control-file" id="attachment" name="attachment"> --}}
                     </div>
                 </div>
             </div>
@@ -155,6 +152,8 @@
                 </div>
             </div>
 
+            @include('ideas.partials.delete-attachments')
+
             <div class="form-group">
                 <div class="row">
                     <div class="col-md-12">
@@ -168,9 +167,10 @@
             @include('ideas.partials.comment')
 
             <div class="text-center">
-                <button class="btn btn-success">Submit changes</button>
+                <button class="btn btn-success" formaction="{{ route('ideas.full-edit', $idea) }}">Submit changes</button>
                 @if (URL::previous() == URL::current())
-                <a href="{{ route("ideas.personal-que-active") }}" class="btn btn-primary ml-2">Back to personal queue</a>
+                <a href="{{ route("ideas.personal-que-active") }}" class="btn btn-primary ml-2">Back to personal
+                    queue</a>
                 @else
                 <a href="{{ URL::previous() }}" class="btn btn-primary ml-2">Back</a>
                 @endif

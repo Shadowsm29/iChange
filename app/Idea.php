@@ -64,14 +64,28 @@ class Idea extends Model
         return $this->belongsTo(RagStatus::class, "rag_status_id");
     }
 
+    public function attachments()
+    {
+        return $this->hasMany(Attachment::class);
+    }
+
     public function scopeAssignedTo($query, $authorizedArr)
     {
         return $query->whereIn("pending_at_id", $authorizedArr);
     }
 
-    public function scopeOrIsSme($query, $smeId)
+    public function scopeOrIsSme($query, $sme)
     {
-        return $query->orWhere("sme_id", $smeId);
+        return $query->orWhere("sme_id", $sme);
+    }
+
+    public function scopeAssignedToOrIsSme($query, $authorizedArr, $sme_id)
+    {
+        return $query
+            ->whereIn("pending_at_id", $authorizedArr)
+            ->orWhere(function ($query) use ($sme_id) {
+                $query->where("sme_id", $sme_id)->where("submitter_id", "<>", $sme_id);
+            });
     }
 
     public function scopeIsOpen($query)

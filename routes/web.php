@@ -88,6 +88,14 @@ Route::middleware("auth")->group(function() {
             
             Route::put('/ideas/{idea}', 'IdeaController@update')->name('ideas.update');
             
+            Route::put('/idea/{idea}/attachments/delete/{attachment}', 'AttachmentsController@delete')->name('attachments.delete');
+
+        });
+
+        Route::middleware("download_attachment")->group(function() {
+
+            Route::get('/idea/{idea}/attachments/{attachment}', 'AttachmentsController@download')->name('attachments.download');
+            
         });
 
         Route::middleware("admin_area")->group(function() {
